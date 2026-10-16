@@ -1,0 +1,27 @@
+#weather {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 20rem;
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  background: #f6f8fa;
+  font-family: system-ui, sans-serif;
+}
+.weather-place { margin: 0 0 .5rem; font-size: 1rem; font-weight: 600; }
+.weather-status, .weather-reading { margin: 0 0 .75rem; }
+.weather-temp { font-size: 2.25rem; font-weight: 700; margin-right: .5rem; }
+.weather-conditions { font-size: 1.1rem; }
+.weather-btn {
+  padding: .4rem .8rem;
+  border: 1px solid #8c959f;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+@media (max-width: 480px) {
+  #weather { max-width: none; }
+  .weather-temp { font-size: 1.9rem; }
+}
