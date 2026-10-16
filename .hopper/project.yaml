@@ -7,5 +7,5 @@ runner:
   # image: ghcr.io/kentaree/hopper-runner-claude:latest   # default: HOPPER_RUNNER_IMAGE
   # model: sonnet                                         # default: Claude Code's own
 run_timeout: 45m
-paused: true        # stop picking up and starting work; running steps finish
+#paused: true        # stop picking up and starting work; running steps finish
 workflow: default     # .hopper/workflows/<name>.yaml, or the built-in "default"
