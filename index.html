@@ -4,8 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hello from Hopper</title>
+  <link rel="stylesheet" href="weather.css">
+  <script src="weather.js" defer></script>
 </head>
 <body>
   <h1>Hello from Hopper</h1>
+  <section id="weather" aria-live="polite" aria-label="Weather">
+    <h2 id="weather-place" class="weather-place">Dublin, Ireland</h2>
+    <p id="weather-status" class="weather-status">Loading weather…</p>
+    <p class="weather-reading" id="weather-reading" hidden>
+      <span id="weather-temp" class="weather-temp"></span>
+      <span id="weather-conditions" class="weather-conditions"></span>
+    </p>
+    <button type="button" id="weather-retry" class="weather-btn" hidden>Retry</button>
+    <button type="button" id="weather-unit" class="weather-btn" aria-label="Switch temperature unit">°F</button>
+  </section>
 </body>
 </html>
