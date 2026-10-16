@@ -8,4 +8,5 @@ runner:
   # model: sonnet                                         # default: Claude Code's own
 run_timeout: 45m
 #paused: true        # stop picking up and starting work; running steps finish
-workflow: default     # .hopper/workflows/<name>.yaml, or the built-in "default"
+workflow: product      # for tickets people write: .hopper/workflows/<name>.yaml or a built-in
+task_workflow: build   # for the tasks Hopper splits them into
