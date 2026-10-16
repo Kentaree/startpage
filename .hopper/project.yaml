@@ -1,0 +1,11 @@
+# Hopper reads this from the project repo's default branch. Every field is
+# optional; without this file the project runs with the defaults below.
+name: Start page
+ready_label: hopper:ready   # issues with this label are picked up
+runner:
+  kind: claude-code
+  # image: ghcr.io/kentaree/hopper-runner-claude:latest   # default: HOPPER_RUNNER_IMAGE
+  # model: sonnet                                         # default: Claude Code's own
+run_timeout: 45m
+paused: true        # stop picking up and starting work; running steps finish
+workflow: default     # .hopper/workflows/<name>.yaml, or the built-in "default"
