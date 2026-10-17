@@ -44,4 +44,20 @@ docker run -p 3000:3000 -v startpage-data:/data \
 | `BASE_URL` | Public URL of the app, e.g. `https://start.example.com` (used for OAuth redirects) |
 | `PORT` / `HOST` | Listen port (default `3000`) / address (default `0.0.0.0`) |
 
-`SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BASE_URL` are reserved for the upcoming login feature; the server does not read them yet.
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `BASE_URL` enable Google sign-in (the redirect URI to register is `$BASE_URL/auth/google/callback`). `BASE_URL` also drives the CSRF Origin check and cookie flags: session cookies are `Secure` when it starts with `https:` (or, if unset, when `NODE_ENV=production`); use an `http://localhost` URL for local dev. Set `TRUST_PROXY=1` behind a reverse proxy so rate limiting sees client IPs. `SESSION_SECRET` is not used: sessions are opaque random tokens stored hashed in the `sessions` table.
+
+## Authentication
+
+Every route except `/login`, `/auth/*`, `/healthz` and the sign-in assets requires a session: pages redirect to `/login`, `/api/*` returns 401.
+
+- **Email/password**: `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`. Passwords are hashed with argon2id (minimum 10 characters), emails are lowercased, and login/signup are rate limited per IP (and per email for login) in memory.
+- **Google**: `GET /auth/google` and `/auth/google/callback` use the OIDC authorization code flow with PKCE, state and nonce. Accounts are linked by Google `sub`; the email is only used if `email_verified` is true. A Google login is never linked to an existing account by email: the user is told to sign in with their existing method.
+- **Sessions**: 30-day server-side sessions; the cookie holds a random token and only its SHA-256 is stored. Cookies are `HttpOnly; SameSite=Lax`.
+- **CSRF**: all non-GET requests must carry a matching `Origin` (or `Referer`) header.
+- New accounts get a weather and a clock widget and `lg`/`md`/`sm` layouts.
+
+### Follow-ups (out of scope)
+
+- Email verification
+- Password reset
+- Linking a Google identity to an existing account from a signed-in settings page

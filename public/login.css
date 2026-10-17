@@ -1,0 +1,7 @@
+body { font-family: system-ui, sans-serif; max-width: 22rem; margin: 2rem auto; padding: 0 1rem; }
+form { display: flex; flex-direction: column; gap: .75rem; }
+label { display: flex; flex-direction: column; gap: .25rem; }
+input, button, .login-google { font: inherit; padding: .4rem .6rem; }
+button, .login-google { border: 1px solid #8c959f; border-radius: 6px; background: #fff; cursor: pointer; }
+.login-google { display: inline-block; color: inherit; text-decoration: none; }
+.login-error { padding: .5rem .75rem; border: 1px solid #cf222e; border-radius: 6px; background: #ffebe9; color: #82071e; }

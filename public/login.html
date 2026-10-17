@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in – Pete's start page</title>
+  <link rel="stylesheet" href="login.css">
+  <script src="login.js" defer></script>
+</head>
+<body>
+  <h1>Pete's start page</h1>
+  <p id="login-error" class="login-error" role="alert" hidden></p>
+
+  <section aria-labelledby="signin-h">
+    <h2 id="signin-h">Sign in</h2>
+    <form id="signin-form" method="post" action="/auth/login">
+      <label>Email <input type="email" name="email" autocomplete="email" required></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <button type="submit">Sign in</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="signup-h">
+    <h2 id="signup-h">Create an account</h2>
+    <form id="signup-form" method="post" action="/auth/signup">
+      <label>Email <input type="email" name="email" autocomplete="email" required></label>
+      <label>Password (min. 10 characters)
+        <input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+      <button type="submit">Sign up</button>
+    </form>
+  </section>
+
+  <p><a class="login-google" href="/auth/google">Sign in with Google</a></p>
+</body>
+</html>
