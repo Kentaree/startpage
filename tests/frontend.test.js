@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, moveItem, orderWidgets } from '../public/grid.js';
 import {
-  buildUrl, celsiusToFahrenheit, cityFromConfig, formatTemperature, normalizeUnit, roundCoord, weatherLabel
+  buildWeatherConfig, buildUrl, celsiusToFahrenheit, cityFromConfig, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
 import { buildConfig, feedUrlsFromConfig, formatMeta, safeLink } from '../public/widgets/rss.js';
 import { formatVersion } from '../public/version.js';
@@ -56,6 +56,13 @@ describe('reorder', () => {
 });
 
 describe('weather helpers', () => {
+  it('buildWeatherConfig keeps the saved city with the unit', () => {
+    const city = { name: 'Lisbon, Portugal', lat: 38.72, lon: -9.14 };
+    expect(buildWeatherConfig('F', city)).toEqual({ unit: 'F', city });
+    expect(buildWeatherConfig('f', null)).toEqual({ unit: 'F' });
+    expect(buildWeatherConfig('x')).toEqual({ unit: 'C' });
+  });
+
   it('labels codes', () => {
     expect(weatherLabel(0)).toBe('Clear sky');
     expect(weatherLabel(63)).toBe('Rain');

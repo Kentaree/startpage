@@ -52,6 +52,13 @@ export function cityFromConfig(config) {
   return { name: c.name, lat: roundCoord(c.lat), lon: roundCoord(c.lon) };
 }
 
+// Full config to save: the PUT replaces the whole config, so keep the saved city alongside the unit.
+export function buildWeatherConfig(unit, city) {
+  var cfg = { unit: normalizeUnit(unit) };
+  if (city) cfg.city = { name: city.name, lat: city.lat, lon: city.lon };
+  return cfg;
+}
+
 export function normalizeUnit(u) {
   return typeof u === 'string' && u.toUpperCase() === 'F' ? 'F' : 'C';
 }
@@ -90,9 +97,10 @@ export function render(el, config, api) {
   };
 
   var legacy = takeLegacyUnit();
+  var savedCity = cityFromConfig(config);
   var state = {
     unit: normalizeUnit(legacy || (config && config.unit)),
-    place: DEFAULT_LOCATION.name, celsius: null, code: null
+    place: savedCity ? savedCity.name : DEFAULT_LOCATION.name, celsius: null, code: null
   };
   var destroyed = false;
   var requestToken = 0;
@@ -102,7 +110,7 @@ export function render(el, config, api) {
 
   function saveUnit() {
     if (api && api.updateConfig) {
-      Promise.resolve(api.updateConfig({ unit: state.unit })).catch(function () { /* keep local state */ });
+      Promise.resolve(api.updateConfig(buildWeatherConfig(state.unit, savedCity))).catch(function () { /* keep local state */ });
     }
   }
 
@@ -181,7 +189,6 @@ export function render(el, config, api) {
   draw();
   if (legacy !== null && (!config || normalizeUnit(config.unit) !== legacy)) saveUnit();
 
-  var savedCity = cityFromConfig(config);
   if (savedCity) {
     load(savedCity);
   } else {
