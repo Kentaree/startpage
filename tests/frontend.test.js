@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, moveItem, orderWidgets } from '../public/grid.js';
+import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, isEnabled, mergeVisibleOrder, moveItem, orderWidgets } from '../public/grid.js';
 import {
   buildUrl, celsiusToFahrenheit, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
 import { safeLink } from '../public/widgets/rss.js';
 import { formatVersion } from '../public/version.js';
 import { formatTime } from '../public/widgets/clock.js';
+
+describe('grid enabled state', () => {
+  it('treats missing enabled as on', () => {
+    expect(isEnabled({ id: 1 })).toBe(true);
+    expect(isEnabled({ id: 1, enabled: false })).toBe(false);
+  });
+  it('keeps hidden ids in the full order when reordering visible ones', () => {
+    expect(mergeVisibleOrder([1, 2, 3, 4], [4, 3, 1])).toEqual([4, 2, 3, 1]);
+    expect(mergeVisibleOrder([1, 2, 3], [3, 1, 2])).toEqual([3, 1, 2]);
+  });
+});
 
 describe('grid', () => {
   it('maps widths to breakpoints and columns', () => {
