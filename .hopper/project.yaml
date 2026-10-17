@@ -10,3 +10,13 @@ run_timeout: 45m
 #paused: true        # stop picking up and starting work; running steps finish
 workflow: product      # for tickets people write: .hopper/workflows/<name>.yaml or a built-in
 task_workflow: build   # for the tasks Hopper splits them into
+
+# Who signs off specs (M4). Pete is both sides for now.
+approvers:
+  product: [Kentaree]
+  technical: [Kentaree]
+spec_gate:
+  mode: auto            # Jev via OpenRouter decides per spec
+  rules:
+    - when: [migration, database schema]
+      require: technical
