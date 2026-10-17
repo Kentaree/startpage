@@ -45,6 +45,18 @@ export function healOrder(stored: unknown, validIds: number[]): number[] {
   return out;
 }
 
+/** True when `order` is exactly a permutation of `validIds` (no unknown, missing or duplicate ids). */
+export function isPermutation(order: unknown, validIds: number[]): order is number[] {
+  if (!Array.isArray(order) || order.length !== validIds.length) return false;
+  const valid = new Set(validIds);
+  const seen = new Set<number>();
+  for (const id of order) {
+    if (typeof id !== "number" || !valid.has(id) || seen.has(id)) return false;
+    seen.add(id);
+  }
+  return true;
+}
+
 function parseJson(s: string, fallback: unknown) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
@@ -65,6 +77,20 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo) {
       widgets: widgets.map((w) => ({ id: w.id, type: w.type, config: parseJson(w.config_json, {}) })),
       layouts,
     };
+  });
+
+  app.put("/api/layouts/:breakpoint", async (req, reply) => {
+    const userId = req.user!.id;
+    const bp = (req.params as { breakpoint: string }).breakpoint as Breakpoint;
+    if (!BREAKPOINTS.includes(bp)) return reply.code(404).send({ error: "Unknown breakpoint" });
+    const saved = db.transaction(() => {
+      const ids = repo.widgets.listForUser(userId).map((w) => w.id);
+      if (!isPermutation(req.body, ids)) return null;
+      repo.layouts.set(userId, bp, req.body);
+      return req.body;
+    })();
+    if (!saved) return reply.code(400).send({ error: "Order must list each of your widgets exactly once" });
+    return { breakpoint: bp, order: saved };
   });
 
   app.post("/api/widgets", async (req, reply) => {

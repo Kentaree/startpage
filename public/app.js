@@ -21,6 +21,9 @@ function showError(msg) { errorEl.textContent = msg; errorEl.hidden = !msg; }
 
 var state = { widgets: [], layouts: { lg: [], md: [], sm: [] } };
 var grid = createGrid(container, registry, {
+  saveLayout: function (bp, order) {
+    return request('PUT', '/api/layouts/' + bp, order).then(function () { showError(''); });
+  },
   updateConfig: function (id, config) {
     return request('PATCH', '/api/widgets/' + id, { config: config }).then(function (w) {
       // Keep local state in sync without re-rendering (the widget already shows the change).
@@ -37,7 +40,7 @@ var grid = createGrid(container, registry, {
     grid.setState(state);
     showError('');
   }).catch(function () { showError('Could not remove the widget.'); });
-});
+}, showError);
 
 function add(type) {
   request('POST', '/api/widgets', { type: type, config: DEFAULT_CONFIG[type] }).then(function (w) {

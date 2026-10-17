@@ -35,3 +35,19 @@ body { font-family: system-ui, sans-serif; margin: 1rem; }
 @media (max-width: 480px) {
   .weather-temp, .clock-time { font-size: 1.9rem; }
 }
+
+.widget-handle {
+  position: absolute; top: .5rem; left: .5rem;
+  padding: .1rem .4rem; line-height: 1.2;
+  cursor: grab;
+  touch-action: none; /* dragging the handle must not scroll; the rest of the card still scrolls */
+  user-select: none;
+}
+.widget-handle:active { cursor: grabbing; }
+.widget { padding-left: 3rem; }
+.widget.dragging { opacity: .6; }
+.widget.drop-target { outline: 2px dashed #0969da; outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
