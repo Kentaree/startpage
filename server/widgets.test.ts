@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
 import { openDb } from "./db.js";
 import { SESSION_COOKIE } from "./auth/sessions.js";
-import { healOrder, isPermutation, validateConfig } from "./widgets.js";
+import { RssError } from "./rss/service.js";
+import { checkConfig, feedUrlsOf, healOrder, isPermutation, mergeFeeds, validateConfig } from "./widgets.js";
 
 const ORIGIN = "http://localhost:3000";
 const PW = "correct-horse-battery";
@@ -24,7 +25,7 @@ describe("validateConfig / healOrder", () => {
     expect(validateConfig("weather", { unit: "f" })).toEqual({ unit: "F" });
     expect(validateConfig("weather", { unit: "K" })).toBeNull();
     expect(validateConfig("clock", { x: 1 })).toEqual({});
-    expect(validateConfig("rss", { feedUrl: "https://e.com/feed" })).toEqual({ feedUrl: "https://e.com/feed" });
+    expect(validateConfig("rss", { feedUrl: "https://e.com/feed" })).toEqual({ feedUrls: ["https://e.com/feed"] });
     expect(validateConfig("rss", { feedUrl: "javascript:alert(1)" })).toBeNull();
     expect(validateConfig("rss", {})).toEqual({});
     expect(validateConfig("rss", { feedUrl: 5 })).toBeNull();
@@ -121,5 +122,54 @@ describe("layouts API", () => {
     const bOrder = [...bBefore.layouts.lg].reverse();
     expect((await call("PUT", "/api/layouts/lg", b, bOrder as unknown as object)).statusCode).toBe(200);
     expect((await call("GET", "/api/state", a)).json().layouts.lg).toEqual(aIds);
+  });
+});
+
+describe("richer widget configs", () => {
+  it("validates weather city", () => {
+    expect(validateConfig("weather", { unit: "F", city: { name: " Lisbon ", lat: 38.7223, lon: -9.1393, junk: 1 } }))
+      .toEqual({ unit: "F", city: { name: "Lisbon", lat: 38.72, lon: -9.14 } });
+    expect(validateConfig("weather", {})).toEqual({ unit: "C" });
+    expect(validateConfig("weather", { city: { name: "X", lat: 91, lon: 0 } })).toBeNull();
+    expect(validateConfig("weather", { city: { name: "X", lat: 0, lon: -181 } })).toBeNull();
+    expect(validateConfig("weather", { city: { name: "", lat: 0, lon: 0 } })).toBeNull();
+    expect(validateConfig("weather", { city: { name: "x".repeat(101), lat: 0, lon: 0 } })).toBeNull();
+    expect(validateConfig("weather", { city: { name: "X", lat: "1", lon: 0 } })).toBeNull();
+  });
+  it("validates clock hour12", () => {
+    expect(validateConfig("clock", { hour12: false, x: 1 })).toEqual({ hour12: false });
+    expect(validateConfig("clock", { hour12: "yes" })).toBeNull();
+  });
+  it("reads legacy feedUrl and writes feedUrls", () => {
+    expect(validateConfig("rss", { feedUrl: "https://a.com/f" })).toEqual({ feedUrls: ["https://a.com/f"] });
+    expect(validateConfig("rss", { feedUrls: ["https://a.com/f", "http://b.com/g", "https://a.com/f"] }))
+      .toEqual({ feedUrls: ["https://a.com/f", "http://b.com/g"] });
+    expect(feedUrlsOf({ feedUrl: "https://a.com/f" })).toEqual(["https://a.com/f"]);
+    expect(feedUrlsOf({ feedUrls: ["https://x.com"] })).toEqual(["https://x.com"]);
+    expect(feedUrlsOf({})).toEqual([]);
+  });
+  it("rejects bad feed URLs with a clear message", () => {
+    const r = checkConfig("rss", { feedUrls: ["https://ok.com/f", "example.com/feed"] });
+    expect(r).toEqual({ error: expect.stringContaining("Feed 2") });
+    expect((r as { error: string }).error).toContain("http:// or https://");
+    expect(validateConfig("rss", { feedUrls: ["ftp://x.com/f"] })).toBeNull();
+    expect(validateConfig("rss", { feedUrls: ["https://a.com/" + "x".repeat(2048)] })).toBeNull();
+    expect(validateConfig("rss", { feedUrls: Array.from({ length: 11 }, (_, i) => `https://a.com/${i}`) })).toBeNull();
+    expect(validateConfig("rss", { feedUrls: "https://a.com" })).toBeNull();
+  });
+  it("merges feeds newest-first and tolerates partial failure", async () => {
+    const feeds: Record<string, { title: string; link: null; date: string | null }[]> = {
+      "https://a.com/f": [{ title: "A1", link: null, date: "2026-10-17T10:00:00Z" }, { title: "A2", link: null, date: null }],
+      "https://c.com/f": [{ title: "C1", link: null, date: "2026-10-17T12:00:00Z" }],
+    };
+    const getItems = async (u: string) => {
+      if (u === "https://b.com/f") throw new RssError("Could not load the feed.", 502);
+      return feeds[u];
+    };
+    const r = await mergeFeeds(["https://a.com/f", "https://b.com/f", "https://c.com/f"], getItems);
+    expect(r.items.map((i) => i.title)).toEqual(["C1", "A1", "A2"]);
+    expect(r.items[0].source).toBe("c.com");
+    expect(r.errors).toEqual([{ feedUrl: "https://b.com/f", error: "Could not load the feed." }]);
+    expect((await mergeFeeds(["https://a.com/f", "https://c.com/f"], getItems, 2)).items).toHaveLength(2);
   });
 });

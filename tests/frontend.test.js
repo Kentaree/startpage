@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, moveItem, orderWidgets } from '../public/grid.js';
 import {
-  buildUrl, celsiusToFahrenheit, formatTemperature, normalizeUnit, roundCoord, weatherLabel
+  buildUrl, celsiusToFahrenheit, cityFromConfig, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
-import { safeLink } from '../public/widgets/rss.js';
+import { buildConfig, feedUrlsFromConfig, formatMeta, safeLink } from '../public/widgets/rss.js';
 import { formatVersion } from '../public/version.js';
 import { formatTime } from '../public/widgets/clock.js';
 
@@ -102,5 +102,28 @@ describe('version footer', () => {
 
   it('defaults to the current year', () => {
     expect(formatVersion('0.1.0')).toBe('startpage v0.1.0 \u00b7 ' + new Date().getFullYear());
+  });
+});
+
+describe('richer widget options', () => {
+  it('reads a saved weather city', () => {
+    expect(cityFromConfig({ city: { name: 'Lisbon', lat: 38.7223, lon: -9.1393 } })).toEqual({ name: 'Lisbon', lat: 38.72, lon: -9.14 });
+    expect(cityFromConfig({ unit: 'C' })).toBeNull();
+    expect(cityFromConfig({ city: { name: 'X', lat: 99, lon: 0 } })).toBeNull();
+    expect(cityFromConfig(null)).toBeNull();
+  });
+  it('clock honours hour12', () => {
+    const d = new Date(2024, 0, 1, 19, 42, 5);
+    expect(formatTime(d, false)).toMatch(/^19/);
+    expect(formatTime(d, true)).toMatch(/^07/);
+    expect(formatTime(d, true)).toMatch(/pm/i);
+  });
+  it('builds and reads rss configs', () => {
+    expect(feedUrlsFromConfig({ feedUrl: 'https://a.com/f' })).toEqual(['https://a.com/f']);
+    expect(feedUrlsFromConfig({ feedUrls: ['https://a.com/f', 'https://b.com/f'] })).toHaveLength(2);
+    expect(feedUrlsFromConfig({})).toEqual([]);
+    expect(buildConfig('https://a.com/f')).toEqual({ feedUrls: ['https://a.com/f'] });
+    expect(formatMeta({ source: 'bbc.co.uk', date: null })).toBe('bbc.co.uk');
+    expect(formatMeta({ title: 't' })).toBe('');
   });
 });

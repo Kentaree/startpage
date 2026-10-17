@@ -43,6 +43,15 @@ export function buildUrl(lat, lon) {
     '&longitude=' + roundCoord(lon) + '&current=temperature_2m,weather_code';
 }
 
+// A saved city ({name, lat, lon}) from the widget config, or null when absent/malformed.
+export function cityFromConfig(config) {
+  var c = config && config.city;
+  if (!c || typeof c.name !== 'string' || !c.name) return null;
+  if (typeof c.lat !== 'number' || typeof c.lon !== 'number') return null;
+  if (!isFinite(c.lat) || !isFinite(c.lon) || Math.abs(c.lat) > 90 || Math.abs(c.lon) > 180) return null;
+  return { name: c.name, lat: roundCoord(c.lat), lon: roundCoord(c.lon) };
+}
+
 export function normalizeUnit(u) {
   return typeof u === 'string' && u.toUpperCase() === 'F' ? 'F' : 'C';
 }
@@ -172,8 +181,13 @@ export function render(el, config, api) {
   draw();
   if (legacy !== null && (!config || normalizeUnit(config.unit) !== legacy)) saveUnit();
 
-  load(DEFAULT_LOCATION);
-  if (navigator.geolocation) {
+  var savedCity = cityFromConfig(config);
+  if (savedCity) {
+    load(savedCity);
+  } else {
+    load(DEFAULT_LOCATION);
+  }
+  if (!savedCity && navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       function (pos) {
         if (destroyed) return;
