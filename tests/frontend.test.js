@@ -123,6 +123,29 @@ describe('version footer', () => {
   });
 });
 
+import { typeLabel, switchText, typeCaption, removeTitle, toggleMessage, withoutWidget } from '../public/settings-helpers.js';
+
+describe('settings helpers', () => {
+  it('labels types, falling back to the raw type', () => {
+    expect(typeLabel({ rss: { label: 'RSS' } }, 'rss')).toBe('RSS');
+    expect(typeLabel({}, 'foo')).toBe('foo');
+  });
+  it('describes state', () => {
+    expect(switchText(true)).toBe('On');
+    expect(switchText(false)).toBe('Off');
+    expect(typeCaption({ type: 'rss', enabled: false })).toBe('rss widget · hidden from start page');
+    expect(typeCaption({ type: 'clock' })).toBe('clock widget');
+    expect(removeTitle('RSS')).toBe('Remove this RSS widget?');
+    expect(toggleMessage(true, true)).toBe('Saved');
+    expect(toggleMessage(false, true)).toMatch(/^Could not save/);
+  });
+  it('removes a widget by id without mutating', () => {
+    const w = [{ id: 1 }, { id: 2 }];
+    expect(withoutWidget(w, 1)).toEqual([{ id: 2 }]);
+    expect(w).toHaveLength(2);
+  });
+});
+
 describe('richer widget options', () => {
   it('reads a saved weather city', () => {
     expect(cityFromConfig({ city: { name: 'Lisbon', lat: 38.7223, lon: -9.1393 } })).toEqual({ name: 'Lisbon', lat: 38.72, lon: -9.14 });

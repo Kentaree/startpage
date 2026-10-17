@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="settings.css">
+  <script type="module" src="settings.js"></script>
+</head>
+<body class="settings">
+  <div class="toolbar"><a class="app-btn" href="/">← Back to start page</a></div>
+  <h1>Widget settings</h1>
+  <p class="sub">Turn widgets on or off and change their options. Switching a widget off hides it but keeps its settings and position.</p>
+  <p id="app-error" class="app-error" role="alert" hidden></p>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <main id="cards"></main>
+  <div id="empty" class="empty" hidden>
+    <h2>You don't have any widgets yet</h2>
+    <p>Add a clock, weather or RSS widget from your start page, then come back here to fine-tune it.</p>
+    <a class="app-btn primary" href="/">Go to start page</a>
+  </div>
+  <dialog id="confirm" class="dialog" role="alertdialog" aria-labelledby="confirm-title" aria-describedby="confirm-desc">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-desc">Its settings will be deleted. This can't be undone. To keep them, switch it off instead.</p>
+    <div class="actions">
+      <button type="button" class="app-btn" id="confirm-cancel">Cancel</button>
+      <button type="button" class="app-btn danger" id="confirm-ok">Remove widget</button>
+    </div>
+  </dialog>
+</body>
+</html>
