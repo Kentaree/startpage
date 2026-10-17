@@ -121,7 +121,7 @@ describe("GET /api/rss", () => {
     const { call, a, mk, now } = await setup(async () => { calls++; return resp(200, FEED, { etag: '"v1"' }); });
     const id = await mk(a, "https://example.com/feed");
     const r = await call("GET", `/api/rss?widgetId=${id}`, a);
-    expect(r.json()).toEqual({ items: [{ title: "Hello", link: "https://e.com/1", date: null }] });
+    expect(r.json()).toEqual({ items: [{ title: "Hello", link: "https://e.com/1", date: null, source: "example.com" }], errors: [] });
     await call("GET", `/api/rss?widgetId=${id}`, a);
     expect(calls).toBe(1);
     now.t += 20 * 60_000;
@@ -172,8 +172,8 @@ describe("GET /api/rss", () => {
   it("persists the feed URL via PATCH and requires auth", async () => {
     const { call, a, mk } = await setup(async () => resp(200, FEED));
     const id = await mk(a);
-    expect((await call("PATCH", `/api/widgets/${id}`, a, { config: { feedUrl: "https://example.com/f" } })).json().config).toEqual({ feedUrl: "https://example.com/f" });
-    expect((await call("GET", "/api/state", a)).json().widgets.find((w: { id: number }) => w.id === id).config.feedUrl).toBe("https://example.com/f");
+    expect((await call("PATCH", `/api/widgets/${id}`, a, { config: { feedUrl: "https://example.com/f" } })).json().config).toEqual({ feedUrls: ["https://example.com/f"] });
+    expect((await call("GET", "/api/state", a)).json().widgets.find((w: { id: number }) => w.id === id).config.feedUrls).toEqual(["https://example.com/f"]);
     expect((await call("GET", `/api/rss?widgetId=${id}`, "")).statusCode).toBe(401);
   });
 });
