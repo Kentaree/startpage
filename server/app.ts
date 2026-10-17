@@ -2,6 +2,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyCookie from "@fastify/cookie";
 import crypto from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DB } from "./db.js";
@@ -20,6 +21,10 @@ const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", 
 const OAUTH_COOKIE = "g_oauth";
 const OAUTH_TTL_MS = 10 * 60 * 1000;
 /** Paths reachable without a session (besides /auth/*). */
+const { version } = JSON.parse(
+  fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf8")
+) as { version: string };
+
 const PUBLIC_PATHS = new Set(["/login", "/login.html", "/login.js", "/login.css", "/healthz"]);
 
 const CSP = [
@@ -119,6 +124,8 @@ export function buildApp(db: DB, opts: AppOptions = {}) {
     if (pathname === "/api" || pathname.startsWith("/api/")) return reply.code(401).send({ error: "Not authenticated" });
     return reply.redirect("/login");
   });
+
+  app.get("/api/version", async () => ({ version }));
 
   app.get("/healthz", async () => {
     db.prepare("SELECT 1").get();

@@ -59,3 +59,5 @@ body { font-family: system-ui, sans-serif; margin: 1rem; }
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
 }
+
+.app-footer { margin-top: 2rem; text-align: center; font-size: .8rem; color: #57606a; }

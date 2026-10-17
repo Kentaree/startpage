@@ -1,5 +1,6 @@
 import { registry } from './widgets/registry.js';
 import { createGrid } from './grid.js';
+import { loadVersionFooter } from './version.js';
 
 var container = document.getElementById('grid');
 var errorEl = document.getElementById('app-error');
@@ -59,3 +60,5 @@ request('GET', '/api/state').then(function (s) {
   state = s;
   grid.setState(state);
 }).catch(function () { showError('Could not load your widgets.'); });
+
+loadVersionFooter();
