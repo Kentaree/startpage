@@ -1,0 +1,7 @@
+{
+  // Used by VS Code and by Hopper, whose runs use this image.
+  "name": "startpage",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "postCreateCommand": "npm ci",
+  "forwardPorts": [3000],
+}
