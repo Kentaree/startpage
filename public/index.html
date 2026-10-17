@@ -4,22 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pete's start page</title>
-  <link rel="stylesheet" href="weather.css">
-  <script src="weather.js" defer></script>
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="app.js"></script>
   <script src="signout.js" defer></script>
 </head>
 <body>
   <h1>Pete's start page</h1>
-  <button type="button" id="signout" class="weather-btn">Sign out</button>
-  <section id="weather" aria-live="polite" aria-label="Weather">
-    <h2 id="weather-place" class="weather-place">Dublin, Ireland</h2>
-    <p id="weather-status" class="weather-status">Loading weather…</p>
-    <p class="weather-reading" id="weather-reading" hidden>
-      <span id="weather-temp" class="weather-temp"></span>
-      <span id="weather-conditions" class="weather-conditions"></span>
-    </p>
-    <button type="button" id="weather-retry" class="weather-btn" hidden>Retry</button>
-    <button type="button" id="weather-unit" class="weather-btn" aria-label="Switch temperature unit">°F</button>
-  </section>
+  <div class="toolbar">
+    <button type="button" data-add="clock" class="app-btn">Add clock</button>
+    <button type="button" data-add="weather" class="app-btn">Add weather</button>
+    <button type="button" id="signout" class="app-btn">Sign out</button>
+  </div>
+  <p id="app-error" class="app-error" role="alert" hidden></p>
+  <main id="grid" class="grid"></main>
 </body>
 </html>

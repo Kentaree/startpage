@@ -1,0 +1,37 @@
+body { font-family: system-ui, sans-serif; margin: 1rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.app-error { color: #b42318; }
+.app-btn {
+  padding: .4rem .8rem;
+  border: 1px solid #8c959f;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Columns: 1 by default (sm), 2 from 640px (md), 3 from 1024px (lg). Keep in sync with grid.js. */
+.grid { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+@media (min-width: 640px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+.widget {
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  background: #f6f8fa;
+}
+.widget-remove { position: absolute; top: .5rem; right: .5rem; padding: .1rem .5rem; line-height: 1.2; }
+
+.weather-place { margin: 0 2rem .5rem 0; font-size: 1rem; font-weight: 600; }
+.weather-status, .weather-reading { margin: 0 0 .75rem; }
+.weather-temp { font-size: 2.25rem; font-weight: 700; margin-right: .5rem; }
+.weather-conditions { font-size: 1.1rem; }
+.clock-time { margin: 0; font-size: 2.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.clock-date { margin: .25rem 0 0; }
+@media (max-width: 480px) {
+  .weather-temp, .clock-time { font-size: 1.9rem; }
+}

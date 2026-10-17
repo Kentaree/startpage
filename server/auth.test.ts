@@ -27,7 +27,7 @@ function setup(opts: AppOptions = {}, profile?: GoogleProfile) {
 describe("route guard", () => {
   it("redirects anonymous pages to /login and 401s /api", async () => {
     const { app } = setup();
-    for (const url of ["/", "/about.html", "/weather.js", "/nope"]) {
+    for (const url of ["/", "/about.html", "/app.js", "/nope"]) {
       const r = await app.inject(url);
       expect(r.statusCode, url).toBe(302);
       expect(r.headers.location).toBe("/login");

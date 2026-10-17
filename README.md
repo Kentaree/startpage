@@ -1,8 +1,16 @@
 # startpage
 
-## Weather widget
+## Widgets
 
-The start page (`index.html`) shows the current temperature and conditions. It defaults to Dublin, Ireland and switches to "Your location" if the visitor allows geolocation. The °C/°F choice is remembered in `localStorage`. Coordinates are rounded and never stored.
+The start page (`index.html`) is a grid of widgets rendered from server state (`GET /api/state`): 3 columns from 1024px, 2 from 640px, otherwise 1. Each breakpoint (`lg`/`md`/`sm`) has its own widget order. Widgets can be added (Clock, Weather) and removed from the page; changes persist per user.
+
+API (authenticated, scoped to the signed-in user): `GET /api/state`, `POST /api/widgets` (`{type, config}`), `PATCH /api/widgets/:id` (`{config}`), `DELETE /api/widgets/:id`. Configs are validated per type (weather `{unit}`, clock `{}`, rss `{feedUrl}`).
+
+Frontend code is vanilla ES modules in `public/`: `grid.js` (pure ordering/column functions plus rendering), `widgets/registry.js`, `widgets/weather.js`, `widgets/clock.js`.
+
+### Weather
+
+Defaults to Dublin, Ireland and switches to "Your location" if the visitor allows geolocation. The °C/°F choice is stored in the widget's config. A unit left in `localStorage` by older versions is used once and then removed. Coordinates are rounded and never stored. Several weather widgets can coexist.
 
 Data comes from [Open-Meteo](https://open-meteo.com/); no API key is needed, and the free tier is for non-commercial use only.
 

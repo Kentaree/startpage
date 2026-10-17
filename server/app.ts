@@ -11,6 +11,7 @@ import {
 } from "./auth/accounts.js";
 import { SESSION_COOKIE, createSession, hashToken, lookupSession } from "./auth/sessions.js";
 import { createRateLimiter } from "./auth/rateLimit.js";
+import { registerWidgetRoutes } from "./widgets.js";
 import { createGoogleClient, newChecks, type GoogleChecks, type GoogleClient } from "./auth/google.js";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
@@ -219,6 +220,8 @@ export function buildApp(db: DB, opts: AppOptions = {}) {
     startSession(reply, user.id);
     return reply.redirect("/");
   });
+
+  registerWidgetRoutes(app, db, repo);
 
   app.register(fastifyStatic, { root: publicDir });
   return app;
