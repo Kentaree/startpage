@@ -97,6 +97,10 @@ describe('rss helpers', () => {
 
 describe('version footer', () => {
   it('formats the version', () => {
-    expect(formatVersion('0.1.0')).toBe('startpage v0.1.0');
+    expect(formatVersion('0.1.0', 2026)).toBe('startpage v0.1.0 \u00b7 2026');
+  });
+
+  it('defaults to the current year', () => {
+    expect(formatVersion('0.1.0')).toBe('startpage v0.1.0 \u00b7 ' + new Date().getFullYear());
   });
 });

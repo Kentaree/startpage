@@ -1,4 +1,7 @@
-export function formatVersion(v) { return 'startpage v' + v; }
+export function formatVersion(v, year) {
+  if (year === undefined) year = new Date().getFullYear();
+  return 'startpage v' + v + ' \u00b7 ' + year;
+}
 
 export function loadVersionFooter() {
   fetch('/api/version').then(function (r) {
