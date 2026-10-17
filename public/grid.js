@@ -118,6 +118,7 @@ export function createGrid(container, registry, api, onRemove, onError) {
       cards.set(w.id, { card: card, handle: handle });
       container.append(card);
       var instance = def.render(body, w.config, {
+        id: w.id,
         updateConfig: function (config) { return api.updateConfig(w.id, config); }
       });
       mounted.push({ id: w.id, instance: instance || def });

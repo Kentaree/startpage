@@ -11,6 +11,7 @@ import {
 } from "./auth/accounts.js";
 import { SESSION_COOKIE, createSession, hashToken, lookupSession } from "./auth/sessions.js";
 import { createRateLimiter } from "./auth/rateLimit.js";
+import { createRssService, type RssServiceOptions } from "./rss/service.js";
 import { registerWidgetRoutes } from "./widgets.js";
 import { createGoogleClient, newChecks, type GoogleChecks, type GoogleClient } from "./auth/google.js";
 
@@ -41,6 +42,8 @@ export interface AppOptions {
   loginRateLimit?: { max: number; windowMs: number };
   signupRateLimit?: { max: number; windowMs: number };
   trustProxy?: boolean;
+  /** Overrides for the RSS fetcher (tests). */
+  rss?: RssServiceOptions;
 }
 
 declare module "fastify" {
@@ -221,7 +224,7 @@ export function buildApp(db: DB, opts: AppOptions = {}) {
     return reply.redirect("/");
   });
 
-  registerWidgetRoutes(app, db, repo);
+  registerWidgetRoutes(app, db, repo, createRssService(repo, opts.rss));
 
   app.register(fastifyStatic, { root: publicDir });
   return app;

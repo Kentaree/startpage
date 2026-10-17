@@ -3,6 +3,7 @@ import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, mo
 import {
   buildUrl, celsiusToFahrenheit, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
+import { safeLink } from '../public/widgets/rss.js';
 import { formatTime } from '../public/widgets/clock.js';
 
 describe('grid', () => {
@@ -82,5 +83,13 @@ describe('weather helpers', () => {
 describe('clock', () => {
   it('formats time', () => {
     expect(formatTime(new Date(2024, 0, 1, 13, 5, 9))).toMatch(/05/);
+  });
+});
+
+describe('rss helpers', () => {
+  it('only allows http(s) links', () => {
+    expect(safeLink('https://e.com/a')).toBe('https://e.com/a');
+    expect(safeLink('javascript:alert(1)')).toBeNull();
+    expect(safeLink('nope')).toBeNull();
   });
 });
