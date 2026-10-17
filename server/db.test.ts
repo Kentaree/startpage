@@ -29,4 +29,17 @@ describe("migrations", () => {
     expect(() => migrate(db, dir)).toThrow();
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name='a'").get()).toBeUndefined();
   });
+
+  it("adds widgets.enabled (default 1) with migration 003, idempotently", () => {
+    const dir = path.join(path.dirname(new URL(import.meta.url).pathname), "migrations");
+    const db = new Database(":memory:");
+    const early = fs.mkdtempSync(path.join(os.tmpdir(), "mig3-"));
+    for (const f of fs.readdirSync(dir).filter((f) => !f.startsWith("003"))) fs.copyFileSync(path.join(dir, f), path.join(early, f));
+    migrate(db, early);
+    db.prepare("INSERT INTO users (email) VALUES ('x@e.com')").run();
+    db.prepare("INSERT INTO widgets (user_id, type) VALUES (1, 'clock')").run();
+    expect(migrate(db, dir)).toHaveLength(1);
+    expect((db.prepare("SELECT enabled FROM widgets").get() as any).enabled).toBe(1);
+    expect(migrate(db, dir)).toEqual([]);
+  });
 });

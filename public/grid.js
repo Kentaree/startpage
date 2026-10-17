@@ -26,6 +26,19 @@ export function orderWidgets(widgets, order) {
   return out;
 }
 
+// Widgets with `enabled === false` are hidden; clients/servers that omit the flag show everything.
+export function isEnabled(w) {
+  return w.enabled !== false;
+}
+
+// Put the reordered visible ids back into the full order: hidden ids keep their
+// slots, and the visible ids fill the remaining slots in their new sequence.
+export function mergeVisibleOrder(fullOrder, visibleOrder) {
+  var visible = new Set(visibleOrder);
+  var i = 0;
+  return fullOrder.map(function (id) { return visible.has(id) ? visibleOrder[i++] : id; });
+}
+
 // Zero-based column for each position when items flow left-to-right across `cols` columns.
 export function assignColumns(count, cols) {
   var out = [];
@@ -94,7 +107,7 @@ export function createGrid(container, registry, api, onRemove, onError) {
   function render() {
     unmountAll();
     container.dataset.breakpoint = current;
-    orderWidgets(state.widgets, state.layouts[current]).forEach(function (w) {
+    orderWidgets(state.widgets, state.layouts[current]).filter(isEnabled).forEach(function (w) {
       var def = registry[w.type];
       if (!def) return;
       var card = document.createElement('section');
@@ -125,8 +138,14 @@ export function createGrid(container, registry, api, onRemove, onError) {
     });
   }
 
-  function currentOrder() {
+  // Full order, including disabled widgets (this is what the server expects).
+  function fullOrder() {
     return orderWidgets(state.widgets, state.layouts[current]).map(function (w) { return w.id; });
+  }
+
+  // Order of the widgets actually shown.
+  function currentOrder() {
+    return orderWidgets(state.widgets, state.layouts[current]).filter(isEnabled).map(function (w) { return w.id; });
   }
 
   function applyOrder() {
@@ -146,8 +165,8 @@ export function createGrid(container, registry, api, onRemove, onError) {
     var bp = current;
     var prev = currentOrder();
     if (next.join() === prev.join()) return;
-    if (!confirmed[bp]) confirmed[bp] = prev;
-    state.layouts[bp] = next;
+    if (!confirmed[bp]) confirmed[bp] = fullOrder();
+    state.layouts[bp] = mergeVisibleOrder(fullOrder(), next);
     applyOrder();
     if (announceId !== undefined) {
       live.textContent = 'Moved ' + typeOf(announceId) + ' widget to position ' +

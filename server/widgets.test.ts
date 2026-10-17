@@ -123,6 +123,36 @@ describe("layouts API", () => {
     expect((await call("PUT", "/api/layouts/lg", b, bOrder as unknown as object)).statusCode).toBe(200);
     expect((await call("GET", "/api/state", a)).json().layouts.lg).toEqual(aIds);
   });
+
+  it("toggles enabled and preserves layout order", async () => {
+    const { call, a, b } = await setup();
+    const st0 = (await call("GET", "/api/state", a)).json();
+    expect(st0.widgets.every((w: { enabled: boolean }) => w.enabled === true)).toBe(true);
+    const [first, second] = st0.widgets;
+    const off = await call("PATCH", `/api/widgets/${first.id}`, a, { enabled: false });
+    expect(off.statusCode).toBe(200);
+    expect(off.json()).toMatchObject({ enabled: false, config: first.config });
+    let st = (await call("GET", "/api/state", a)).json();
+    expect(st.widgets.find((w: { id: number }) => w.id === first.id).enabled).toBe(false);
+    expect(st.layouts).toEqual(st0.layouts);
+    expect((await call("PUT", "/api/layouts/lg", a, [...st.layouts.lg].reverse())).statusCode).toBe(200);
+    expect((await call("PATCH", `/api/widgets/${first.id}`, a, { enabled: true })).json().enabled).toBe(true);
+    st = (await call("GET", "/api/state", a)).json();
+    expect(st.layouts.lg).toEqual([second.id, first.id]);
+    expect(st.widgets.find((w: { id: number }) => w.id === first.id).config).toEqual(first.config);
+  });
+
+  it("PATCH config only keeps enabled; neither is 400; others' widgets are 404", async () => {
+    const { call, a, b } = await setup();
+    const w = (await call("POST", "/api/widgets", a, { type: "weather", config: { unit: "C" } })).json();
+    expect(w.enabled).toBe(true);
+    await call("PATCH", `/api/widgets/${w.id}`, a, { enabled: false });
+    const r = await call("PATCH", `/api/widgets/${w.id}`, a, { config: { unit: "F" } });
+    expect(r.json()).toMatchObject({ config: { unit: "F" }, enabled: false });
+    expect((await call("PATCH", `/api/widgets/${w.id}`, a, {})).statusCode).toBe(400);
+    expect((await call("PATCH", `/api/widgets/${w.id}`, a, { enabled: "no" })).statusCode).toBe(400);
+    expect((await call("PATCH", `/api/widgets/${w.id}`, b, { enabled: false })).statusCode).toBe(404);
+  });
 });
 
 describe("richer widget configs", () => {

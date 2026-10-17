@@ -171,7 +171,7 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
       BREAKPOINTS.map((bp) => [bp, healOrder(parseJson(stored.get(bp) ?? "[]", []), ids)]),
     );
     return {
-      widgets: widgets.map((w) => ({ id: w.id, type: w.type, config: parseJson(w.config_json, {}) })),
+      widgets: widgets.map((w) => ({ id: w.id, type: w.type, config: parseJson(w.config_json, {}), enabled: w.enabled !== 0 })),
       layouts,
     };
   });
@@ -208,7 +208,7 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
       }
       return w;
     })();
-    return reply.code(201).send({ id: widget.id, type: widget.type, config });
+    return reply.code(201).send({ id: widget.id, type: widget.type, config, enabled: widget.enabled !== 0 });
   });
 
   app.patch("/api/widgets/:id", async (req, reply) => {
@@ -216,12 +216,23 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
     const id = parseId((req.params as { id: string }).id);
     const widget = id === null ? undefined : repo.widgets.get(id);
     if (!widget || widget.user_id !== userId) return notFound(reply);
-    const body = (req.body ?? {}) as { config?: unknown };
-    const checked = checkConfig(widget.type, body.config);
-    if (!("config" in checked)) return reply.code(400).send({ error: checked.error });
-    const config = checked.config;
-    repo.widgets.updateConfig(widget.id, userId, config);
-    return { id: widget.id, type: widget.type, config };
+    const body = (req.body ?? {}) as { config?: unknown; enabled?: unknown };
+    const hasConfig = body.config !== undefined;
+    const hasEnabled = body.enabled !== undefined;
+    if (!hasConfig && !hasEnabled) return reply.code(400).send({ error: "Provide config and/or enabled" });
+    if (hasEnabled && typeof body.enabled !== "boolean") return reply.code(400).send({ error: "enabled must be a boolean" });
+    let config: Record<string, unknown> | null = null;
+    if (hasConfig) {
+      const checked = checkConfig(widget.type, body.config);
+      if (!("config" in checked)) return reply.code(400).send({ error: checked.error });
+      config = checked.config;
+    }
+    db.transaction(() => {
+      if (config) repo.widgets.updateConfig(widget.id, userId, config);
+      if (hasEnabled) repo.widgets.setEnabled(widget.id, userId, body.enabled as boolean);
+    })();
+    const fresh = repo.widgets.get(widget.id)!;
+    return { id: fresh.id, type: fresh.type, config: parseJson(fresh.config_json, {}), enabled: fresh.enabled !== 0 };
   });
 
   app.delete("/api/widgets/:id", async (req, reply) => {
