@@ -3,7 +3,7 @@ import { createGrid } from './grid.js';
 
 var container = document.getElementById('grid');
 var errorEl = document.getElementById('app-error');
-var DEFAULT_CONFIG = { weather: { unit: 'C' }, clock: {} };
+var DEFAULT_CONFIG = { weather: { unit: 'C' }, clock: {}, rss: {} };
 
 function request(method, url, body) {
   return fetch(url, {

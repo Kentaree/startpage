@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { DB } from "./db.js";
 import type { Breakpoint, Repo, WidgetType } from "./repo/index.js";
+import { RssError, type createRssService } from "./rss/service.js";
 
 const BREAKPOINTS: Breakpoint[] = ["lg", "md", "sm"];
 const TYPES: WidgetType[] = ["weather", "clock", "rss"];
@@ -20,6 +21,7 @@ export function validateConfig(type: WidgetType, config: unknown): Record<string
     case "clock":
       return {};
     case "rss": {
+      if (c.feedUrl === undefined || c.feedUrl === "") return {}; // not configured yet
       if (typeof c.feedUrl !== "string" || c.feedUrl.length > 2048) return null;
       try {
         const u = new URL(c.feedUrl);
@@ -49,7 +51,7 @@ function parseJson(s: string, fallback: unknown) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
-export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo) {
+export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, rss: ReturnType<typeof createRssService>) {
   const notFound = (reply: FastifyReply) => reply.code(404).send({ error: "Widget not found" });
   const parseId = (raw: string) => (/^\d{1,15}$/.test(raw) ? Number(raw) : null);
 
@@ -112,5 +114,20 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo) {
       return true;
     })();
     return removed ? { ok: true } : notFound(reply);
+  });
+
+  app.get("/api/rss", async (req, reply) => {
+    const raw = (req.query as { widgetId?: unknown }).widgetId;
+    const id = typeof raw === "string" ? parseId(raw) : null;
+    const widget = id === null ? undefined : repo.widgets.get(id);
+    if (!widget || widget.user_id !== req.user!.id || widget.type !== "rss") return notFound(reply);
+    const feedUrl = (parseJson(widget.config_json, {}) as { feedUrl?: unknown }).feedUrl;
+    if (typeof feedUrl !== "string" || !feedUrl) return reply.code(400).send({ error: "No feed URL set" });
+    try {
+      return { items: await rss.getItems(feedUrl) };
+    } catch (e) {
+      if (e instanceof RssError) return reply.code(e.status).send({ error: e.message });
+      throw e;
+    }
   });
 }

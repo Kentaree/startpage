@@ -26,7 +26,8 @@ describe("validateConfig / healOrder", () => {
     expect(validateConfig("clock", { x: 1 })).toEqual({});
     expect(validateConfig("rss", { feedUrl: "https://e.com/feed" })).toEqual({ feedUrl: "https://e.com/feed" });
     expect(validateConfig("rss", { feedUrl: "javascript:alert(1)" })).toBeNull();
-    expect(validateConfig("rss", {})).toBeNull();
+    expect(validateConfig("rss", {})).toEqual({});
+    expect(validateConfig("rss", { feedUrl: 5 })).toBeNull();
     expect(validateConfig("clock", [])).toBeNull();
   });
   it("heals orders", () => {

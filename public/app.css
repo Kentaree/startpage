@@ -35,3 +35,11 @@ body { font-family: system-ui, sans-serif; margin: 1rem; }
 @media (max-width: 480px) {
   .weather-temp, .clock-time { font-size: 1.9rem; }
 }
+
+.rss-form { display: flex; gap: .5rem; margin: 0 0 .75rem; }
+.rss-url { flex: 1; min-width: 0; padding: .35rem .5rem; font: inherit; }
+.rss-status { margin: 0 0 .75rem; }
+.rss-status.rss-error { color: #b42318; }
+.rss-list { margin: 0; padding-left: 1.1rem; }
+.rss-item { margin: 0 0 .5rem; overflow-wrap: anywhere; }
+.rss-date { display: block; font-size: .8rem; color: #57606a; }
