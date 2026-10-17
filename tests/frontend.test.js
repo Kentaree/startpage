@@ -4,6 +4,7 @@ import {
   buildUrl, celsiusToFahrenheit, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
 import { safeLink } from '../public/widgets/rss.js';
+import { formatVersion } from '../public/version.js';
 import { formatTime } from '../public/widgets/clock.js';
 
 describe('grid', () => {
@@ -91,5 +92,11 @@ describe('rss helpers', () => {
     expect(safeLink('https://e.com/a')).toBe('https://e.com/a');
     expect(safeLink('javascript:alert(1)')).toBeNull();
     expect(safeLink('nope')).toBeNull();
+  });
+});
+
+describe('version footer', () => {
+  it('formats the version', () => {
+    expect(formatVersion('0.1.0')).toBe('startpage v0.1.0');
   });
 });
