@@ -33,6 +33,7 @@ export interface Repo {
     get(id: number): Widget | undefined;
     listForUser(userId: number): Widget[];
     updateConfig(id: number, userId: number, config: unknown): boolean;
+    setEnabled(id: number, userId: number, enabled: boolean): boolean;
     delete(id: number, userId: number): boolean;
   };
   layouts: {
@@ -83,6 +84,8 @@ export function createSqliteRepo(db: DB): Repo {
       updateConfig: (id, userId, config) =>
         db.prepare("UPDATE widgets SET config_json = ? WHERE id = ? AND user_id = ?")
           .run(JSON.stringify(config ?? {}), id, userId).changes > 0,
+      setEnabled: (id, userId, enabled) =>
+        db.prepare("UPDATE widgets SET enabled = ? WHERE id = ? AND user_id = ?").run(enabled ? 1 : 0, id, userId).changes > 0,
       delete: (id, userId) => db.prepare("DELETE FROM widgets WHERE id = ? AND user_id = ?").run(id, userId).changes > 0,
     },
     layouts: {
