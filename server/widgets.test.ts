@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
 import { openDb } from "./db.js";
 import { SESSION_COOKIE } from "./auth/sessions.js";
-import { healOrder, validateConfig } from "./widgets.js";
+import { healOrder, isPermutation, validateConfig } from "./widgets.js";
 
 const ORIGIN = "http://localhost:3000";
 const PW = "correct-horse-battery";
@@ -14,7 +14,7 @@ async function setup() {
     const r = await app.inject({ method: "POST", url: "/auth/signup", payload: { email, password: PW }, headers: { origin: ORIGIN } });
     return `${SESSION_COOKIE}=${r.cookies.find((c) => c.name === SESSION_COOKIE)!.value}`;
   };
-  const call = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, cookie: string, payload?: object) =>
+  const call = (method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE", url: string, cookie: string, payload?: object) =>
     app.inject({ method, url, payload, headers: { origin: ORIGIN, cookie } });
   return { app, db, signup, call, a: await signup("a@example.com"), b: await signup("b@example.com") };
 }
@@ -80,5 +80,46 @@ describe("widgets API", () => {
   it("requires authentication", async () => {
     const { app } = await setup();
     expect((await app.inject("/api/state")).statusCode).toBe(401);
+  });
+});
+
+describe("layouts API", () => {
+  it("checks permutations", () => {
+    expect(isPermutation([2, 1], [1, 2])).toBe(true);
+    expect(isPermutation([1], [1, 2])).toBe(false);
+    expect(isPermutation([1, 1], [1, 2])).toBe(false);
+    expect(isPermutation([1, 3], [1, 2])).toBe(false);
+    expect(isPermutation(["1", "2"], [1, 2])).toBe(false);
+    expect(isPermutation({}, [1, 2])).toBe(false);
+  });
+
+  it("saves one breakpoint only and persists it", async () => {
+    const { call, a } = await setup();
+    const before = (await call("GET", "/api/state", a)).json();
+    const rev = [...before.layouts.md].reverse();
+    expect((await call("PUT", "/api/layouts/md", a, rev as unknown as object)).statusCode).toBe(200);
+    const after = (await call("GET", "/api/state", a)).json();
+    expect(after.layouts.md).toEqual(rev);
+    expect(after.layouts.lg).toEqual(before.layouts.lg);
+    expect(after.layouts.sm).toEqual(before.layouts.sm);
+  });
+
+  it("rejects invalid bodies and breakpoints", async () => {
+    const { call, a } = await setup();
+    const [x, y] = (await call("GET", "/api/state", a)).json().layouts.lg as number[];
+    for (const body of [[x], [x, x], [x, y, 9999], [], { order: [x, y] }, ["a", "b"]]) {
+      expect((await call("PUT", "/api/layouts/lg", a, body as unknown as object)).statusCode).toBe(400);
+    }
+    expect((await call("PUT", "/api/layouts/xl", a, [x, y] as unknown as object)).statusCode).toBe(404);
+  });
+
+  it("does not let users use or change others' layouts", async () => {
+    const { call, a, b } = await setup();
+    const aIds = (await call("GET", "/api/state", a)).json().layouts.lg as number[];
+    const bBefore = (await call("GET", "/api/state", b)).json();
+    expect((await call("PUT", "/api/layouts/lg", b, [...aIds].reverse() as unknown as object)).statusCode).toBe(400);
+    const bOrder = [...bBefore.layouts.lg].reverse();
+    expect((await call("PUT", "/api/layouts/lg", b, bOrder as unknown as object)).statusCode).toBe(200);
+    expect((await call("GET", "/api/state", a)).json().layouts.lg).toEqual(aIds);
   });
 });

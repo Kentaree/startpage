@@ -43,3 +43,19 @@ body { font-family: system-ui, sans-serif; margin: 1rem; }
 .rss-list { margin: 0; padding-left: 1.1rem; }
 .rss-item { margin: 0 0 .5rem; overflow-wrap: anywhere; }
 .rss-date { display: block; font-size: .8rem; color: #57606a; }
+
+.widget-handle {
+  position: absolute; top: .5rem; left: .5rem;
+  padding: .1rem .4rem; line-height: 1.2;
+  cursor: grab;
+  touch-action: none; /* dragging the handle must not scroll; the rest of the card still scrolls */
+  user-select: none;
+}
+.widget-handle:active { cursor: grabbing; }
+.widget { padding-left: 3rem; }
+.widget.dragging { opacity: .6; }
+.widget.drop-target { outline: 2px dashed #0969da; outline-offset: 2px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}

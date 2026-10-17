@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignColumns, breakpointForWidth, columnCount, orderWidgets } from '../public/grid.js';
+import { assignColumns, breakpointForWidth, columnCount, dropIndex, moveById, moveItem, orderWidgets } from '../public/grid.js';
 import {
   buildUrl, celsiusToFahrenheit, formatTemperature, normalizeUnit, roundCoord, weatherLabel
 } from '../public/widgets/weather.js';
@@ -24,6 +24,33 @@ describe('grid', () => {
     expect(assignColumns(5, 3)).toEqual([0, 1, 2, 0, 1]);
     expect(assignColumns(3, 1)).toEqual([0, 0, 0]);
     expect(assignColumns(0, 2)).toEqual([]);
+  });
+});
+
+describe('reorder', () => {
+  it('moves items without mutating', () => {
+    const o = [1, 2, 3, 4];
+    expect(moveItem(o, 0, 2)).toEqual([2, 3, 1, 4]);
+    expect(moveItem(o, 3, 0)).toEqual([4, 1, 2, 3]);
+    expect(moveItem(o, 1, 1)).toEqual([1, 2, 3, 4]);
+    expect(moveItem(o, 1, 99)).toEqual([1, 3, 4, 2]);
+    expect(moveItem(o, 9, 0)).toEqual([1, 2, 3, 4]);
+    expect(o).toEqual([1, 2, 3, 4]);
+  });
+  it('moves by id one step, clamped at the ends', () => {
+    expect(moveById([1, 2, 3], 2, -1)).toEqual([2, 1, 3]);
+    expect(moveById([1, 2, 3], 2, 1)).toEqual([1, 3, 2]);
+    expect(moveById([1, 2, 3], 1, -1)).toEqual([1, 2, 3]);
+    expect(moveById([1, 2, 3], 3, 1)).toEqual([1, 2, 3]);
+    expect(moveById([1, 2, 3], 9, 1)).toEqual([1, 2, 3]);
+  });
+  it('finds the drop index from pointer position', () => {
+    const r = (l, t) => ({ left: l, top: t, right: l + 100, bottom: t + 100 });
+    const rects = [r(0, 0), r(110, 0), r(0, 110)];
+    expect(dropIndex(rects, 150, 50)).toBe(1);
+    expect(dropIndex(rects, 50, 160)).toBe(2);
+    expect(dropIndex(rects, 105, 105)).toBe(0); // in a gap: nearest centre
+    expect(dropIndex([], 0, 0)).toBe(-1);
   });
 });
 
