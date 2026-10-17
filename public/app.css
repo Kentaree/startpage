@@ -61,3 +61,8 @@ body { font-family: system-ui, sans-serif; margin: 1rem; }
 }
 
 .app-footer { margin-top: 2rem; text-align: center; font-size: .8rem; color: #57606a; }
+
+.app-btn.primary { border-color: #0969da; color: #0969da; font-weight: 600; }
+a.app-btn { text-decoration: none; display: inline-block; color: inherit; }
+a.app-btn.primary { color: #0969da; }
+.app-btn:focus-visible, .switch input:focus-visible + .track { outline: 2px solid #0969da; outline-offset: 2px; }
