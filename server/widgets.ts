@@ -2,35 +2,130 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { DB } from "./db.js";
 import type { Breakpoint, Repo, WidgetType } from "./repo/index.js";
 import { RssError, type createRssService } from "./rss/service.js";
+import type { RssItem } from "./rss/parse.js";
 
 const BREAKPOINTS: Breakpoint[] = ["lg", "md", "sm"];
 const TYPES: WidgetType[] = ["weather", "clock", "rss"];
 
-/** Validate and normalise a widget config for its type; returns null when invalid. */
-export function validateConfig(type: WidgetType, config: unknown): Record<string, unknown> | null {
+export const MAX_FEEDS = 10;
+export const MAX_FEED_URL = 2048;
+export const MAX_CITY_NAME = 100;
+export const MAX_MERGED_ITEMS = 30;
+
+export type ConfigResult = { config: Record<string, unknown> } | { error: string };
+const fail = (error: string): ConfigResult => ({ error });
+
+function checkFeedUrl(v: unknown, n: number): string | null {
+  const label = `Feed ${n}`;
+  if (typeof v !== "string") return `${label}: the URL must be text.`;
+  const url = v.trim();
+  if (!url) return `${label}: the URL is empty.`;
+  if (url.length > MAX_FEED_URL) return `${label}: the URL is longer than ${MAX_FEED_URL} characters.`;
+  try {
+    const u = new URL(url);
+    if (u.protocol === "http:" || u.protocol === "https:") return null;
+  } catch { /* fall through */ }
+  return `${label}: that doesn't look like a web address. Feed URLs must start with http:// or https://`;
+}
+
+/** Validate and normalise a widget config for its type, explaining the first problem found. */
+export function checkConfig(type: WidgetType, config: unknown): ConfigResult {
   if (config === undefined || config === null) config = {};
-  if (typeof config !== "object" || Array.isArray(config)) return null;
+  if (typeof config !== "object" || Array.isArray(config)) return fail("Config must be an object.");
   const c = config as Record<string, unknown>;
   switch (type) {
     case "weather": {
-      if (c.unit === undefined) return { unit: "C" };
-      if (typeof c.unit !== "string") return null;
-      const unit = c.unit.toUpperCase();
-      return unit === "C" || unit === "F" ? { unit } : null;
-    }
-    case "clock":
-      return {};
-    case "rss": {
-      if (c.feedUrl === undefined || c.feedUrl === "") return {}; // not configured yet
-      if (typeof c.feedUrl !== "string" || c.feedUrl.length > 2048) return null;
-      try {
-        const u = new URL(c.feedUrl);
-        return u.protocol === "http:" || u.protocol === "https:" ? { feedUrl: c.feedUrl } : null;
-      } catch {
-        return null;
+      const out: Record<string, unknown> = { unit: "C" };
+      if (c.unit !== undefined) {
+        const unit = typeof c.unit === "string" ? c.unit.toUpperCase() : "";
+        if (unit !== "C" && unit !== "F") return fail("Unit must be C or F.");
+        out.unit = unit;
       }
+      if (c.city !== undefined && c.city !== null) {
+        const city = c.city as Record<string, unknown>;
+        if (typeof city !== "object" || Array.isArray(city)) return fail("City must be an object with name, lat and lon.");
+        const name = typeof city.name === "string" ? city.name.trim() : "";
+        if (!name) return fail("City name is required.");
+        if (name.length > MAX_CITY_NAME) return fail(`City name must be at most ${MAX_CITY_NAME} characters.`);
+        const { lat, lon } = city;
+        if (typeof lat !== "number" || !Number.isFinite(lat) || lat < -90 || lat > 90)
+          return fail("City latitude must be a number between -90 and 90.");
+        if (typeof lon !== "number" || !Number.isFinite(lon) || lon < -180 || lon > 180)
+          return fail("City longitude must be a number between -180 and 180.");
+        out.city = { name, lat: Math.round(lat * 100) / 100 + 0, lon: Math.round(lon * 100) / 100 + 0 };
+      }
+      return { config: out };
+    }
+    case "clock": {
+      if (c.hour12 === undefined || c.hour12 === null) return { config: {} };
+      if (typeof c.hour12 !== "boolean") return fail("hour12 must be true or false.");
+      return { config: { hour12: c.hour12 } };
+    }
+    case "rss": {
+      let urls: unknown[];
+      if (c.feedUrls !== undefined) {
+        if (!Array.isArray(c.feedUrls)) return fail("feedUrls must be a list of URLs.");
+        urls = c.feedUrls;
+      } else if (c.feedUrl !== undefined && c.feedUrl !== "") {
+        urls = [c.feedUrl]; // legacy single-feed shape
+      } else {
+        urls = [];
+      }
+      if (urls.length > MAX_FEEDS) return fail(`You can add at most ${MAX_FEEDS} feeds.`);
+      const out: string[] = [];
+      for (let i = 0; i < urls.length; i++) {
+        const err = checkFeedUrl(urls[i], i + 1);
+        if (err) return fail(err);
+        const url = (urls[i] as string).trim();
+        if (!out.includes(url)) out.push(url);
+      }
+      return { config: out.length ? { feedUrls: out } : {} }; // empty = not configured yet
     }
   }
+}
+
+/** Validate and normalise a widget config for its type; returns null when invalid. */
+export function validateConfig(type: WidgetType, config: unknown): Record<string, unknown> | null {
+  const r = checkConfig(type, config);
+  return "config" in r ? r.config : null;
+}
+
+/** Feed URLs for a stored rss config, reading the legacy `feedUrl` shape too. */
+export function feedUrlsOf(config: unknown): string[] {
+  const c = (config ?? {}) as { feedUrls?: unknown; feedUrl?: unknown };
+  if (Array.isArray(c.feedUrls)) return c.feedUrls.filter((u): u is string => typeof u === "string" && !!u);
+  return typeof c.feedUrl === "string" && c.feedUrl ? [c.feedUrl] : [];
+}
+
+export interface MergedItem extends RssItem { source: string }
+export interface FeedError { feedUrl: string; error: string }
+
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
+}
+
+/** Fetch every feed, merge newest-first, cap the total; failed feeds are reported, not fatal. */
+export async function mergeFeeds(
+  urls: string[],
+  getItems: (url: string) => Promise<RssItem[]>,
+  limit = MAX_MERGED_ITEMS,
+): Promise<{ items: MergedItem[]; errors: FeedError[]; statuses: number[] }> {
+  const results = await Promise.allSettled(urls.map((u) => getItems(u)));
+  const items: MergedItem[] = [];
+  const errors: FeedError[] = [];
+  const statuses: number[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") {
+      for (const it of r.value) items.push({ ...it, source: hostOf(urls[i]) });
+    } else {
+      const msg = r.reason instanceof RssError ? r.reason.message : "Could not load the feed.";
+      errors.push({ feedUrl: urls[i], error: msg });
+      if (r.reason instanceof RssError) statuses.push(r.reason.status);
+    }
+  });
+  const time = (it: MergedItem) => { const t = it.date ? Date.parse(it.date) : NaN; return Number.isNaN(t) ? -Infinity : t; };
+  items.sort((a, b) => time(b) - time(a));
+  return { items: items.slice(0, limit), errors, statuses };
 }
 
 /** Existing ids in stored order, then any widgets missing from the order. */
@@ -101,8 +196,9 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
     if (typeof body.type !== "string" || !TYPES.includes(body.type as WidgetType))
       return reply.code(400).send({ error: "Unknown widget type" });
     const type = body.type as WidgetType;
-    const config = validateConfig(type, body.config);
-    if (!config) return reply.code(400).send({ error: "Invalid widget config" });
+    const checked = checkConfig(type, body.config);
+    if (!("config" in checked)) return reply.code(400).send({ error: checked.error });
+    const config = checked.config;
     const widget = db.transaction(() => {
       const w = repo.widgets.create(userId, type, config);
       const ids = repo.widgets.listForUser(userId).map((x) => x.id);
@@ -127,8 +223,9 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
     if (hasEnabled && typeof body.enabled !== "boolean") return reply.code(400).send({ error: "enabled must be a boolean" });
     let config: Record<string, unknown> | null = null;
     if (hasConfig) {
-      config = validateConfig(widget.type, body.config);
-      if (!config) return reply.code(400).send({ error: "Invalid widget config" });
+      const checked = checkConfig(widget.type, body.config);
+      if (!("config" in checked)) return reply.code(400).send({ error: checked.error });
+      config = checked.config;
     }
     db.transaction(() => {
       if (config) repo.widgets.updateConfig(widget.id, userId, config);
@@ -158,13 +255,13 @@ export function registerWidgetRoutes(app: FastifyInstance, db: DB, repo: Repo, r
     const id = typeof raw === "string" ? parseId(raw) : null;
     const widget = id === null ? undefined : repo.widgets.get(id);
     if (!widget || widget.user_id !== req.user!.id || widget.type !== "rss") return notFound(reply);
-    const feedUrl = (parseJson(widget.config_json, {}) as { feedUrl?: unknown }).feedUrl;
-    if (typeof feedUrl !== "string" || !feedUrl) return reply.code(400).send({ error: "No feed URL set" });
-    try {
-      return { items: await rss.getItems(feedUrl) };
-    } catch (e) {
-      if (e instanceof RssError) return reply.code(e.status).send({ error: e.message });
-      throw e;
+    const urls = feedUrlsOf(parseJson(widget.config_json, {}));
+    if (!urls.length) return reply.code(400).send({ error: "No feed URL set" });
+    const { items, errors, statuses } = await mergeFeeds(urls, (u) => rss.getItems(u));
+    if (!items.length && errors.length === urls.length) {
+      // Every feed failed: keep the single-feed behaviour of surfacing an error status.
+      return reply.code(urls.length === 1 && statuses.length ? statuses[0] : 502).send({ error: errors.length === 1 ? errors[0].error : "Could not load any of the feeds.", errors });
     }
+    return { items, errors };
   });
 }

@@ -13,6 +13,7 @@ import {
 import { SESSION_COOKIE, createSession, hashToken, lookupSession } from "./auth/sessions.js";
 import { createRateLimiter } from "./auth/rateLimit.js";
 import { createRssService, type RssServiceOptions } from "./rss/service.js";
+import { registerGeocodeRoutes, type GeocodeOptions } from "./geocode.js";
 import { registerWidgetRoutes } from "./widgets.js";
 import { createGoogleClient, newChecks, type GoogleChecks, type GoogleClient } from "./auth/google.js";
 
@@ -49,6 +50,8 @@ export interface AppOptions {
   trustProxy?: boolean;
   /** Overrides for the RSS fetcher (tests). */
   rss?: RssServiceOptions;
+  /** Overrides for the city search proxy (tests). */
+  geocode?: GeocodeOptions;
 }
 
 declare module "fastify" {
@@ -231,6 +234,7 @@ export function buildApp(db: DB, opts: AppOptions = {}) {
     return reply.redirect("/");
   });
 
+  registerGeocodeRoutes(app, opts.geocode);
   registerWidgetRoutes(app, db, repo, createRssService(repo, opts.rss));
 
   app.register(fastifyStatic, { root: publicDir });

@@ -13,6 +13,28 @@ export function formatDate(iso) {
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
 }
 
+// Feed URLs from a config, reading the legacy single `feedUrl` shape too.
+export function feedUrlsFromConfig(config) {
+  if (!config) return [];
+  if (Array.isArray(config.feedUrls)) {
+    return config.feedUrls.filter(function (u) { return typeof u === 'string' && u; });
+  }
+  return typeof config.feedUrl === 'string' && config.feedUrl ? [config.feedUrl] : [];
+}
+
+export function buildConfig(url) {
+  return { feedUrls: [url] };
+}
+
+// "BBC News · 17/10/2026" style line under a headline.
+export function formatMeta(item) {
+  var parts = [];
+  if (item && item.source) parts.push(item.source);
+  var when = item ? formatDate(item.date) : '';
+  if (when) parts.push(when);
+  return parts.join(' · ');
+}
+
 export function render(el, config, api) {
   var root = document.createElement('div');
   root.className = 'rss';
@@ -38,8 +60,22 @@ export function render(el, config, api) {
   root.append(form, status, list);
   el.append(root);
 
-  var feedUrl = config && typeof config.feedUrl === 'string' ? config.feedUrl : '';
-  input.value = feedUrl;
+  var feedUrls = feedUrlsFromConfig(config);
+  var feedUrl = feedUrls.length ? feedUrls[0] : '';
+  var multi = feedUrls.length > 1;
+  input.value = multi ? '' : feedUrl;
+  if (multi) {
+    // Several feeds can't be edited in the one-line form; point at Settings instead.
+    form.hidden = true;
+    var hint = document.createElement('p');
+    hint.className = 'rss-hint';
+    hint.append(feedUrls.length + ' feeds · ');
+    var link = document.createElement('a');
+    link.href = '/settings.html';
+    link.textContent = 'Edit in Settings';
+    hint.append(link);
+    root.append(hint);
+  }
   var destroyed = false;
   var token = 0;
   var controller = null;
@@ -68,7 +104,7 @@ export function render(el, config, api) {
       } else {
         li.textContent = it.title;
       }
-      var when = formatDate(it.date);
+      var when = formatMeta(it);
       if (when) {
         var t = document.createElement('span');
         t.className = 'rss-date';
@@ -96,6 +132,9 @@ export function render(el, config, api) {
       .then(function (body) {
         if (mine !== token || destroyed) return;
         draw(Array.isArray(body.items) ? body.items : []);
+        if (Array.isArray(body.errors) && body.errors.length) {
+          setStatus(body.errors.length + ' of ' + feedUrls.length + ' feeds could not be loaded.', true);
+        }
       })
       .catch(function (e) {
         if (mine !== token || destroyed) return;
@@ -108,8 +147,9 @@ export function render(el, config, api) {
     var url = input.value.trim();
     if (!safeLink(url)) { setStatus('Enter a valid http(s) feed URL.', true); return; }
     save.disabled = true;
-    Promise.resolve(api.updateConfig({ feedUrl: url })).then(function () {
+    Promise.resolve(api.updateConfig(buildConfig(url))).then(function () {
       feedUrl = url;
+      feedUrls = [url];
       save.disabled = false;
       load();
     }, function () {
